@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Banco Solar C.A</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css" integrity="sha384-TX8t27EcRE3e/ihU7zmQxVncDAy5uIKz4rEkgIXeMed4M0jlfIDPvg6uqKI2xXr2" crossorigin="anonymous">
+    <style>
+      body {
+        background: #e5e1dd;
+      }
+      form {
+        padding: 15px;
+        background: #f8f9fa;
+        border-radius: 10px;
+      }
+    </style>
+</head>
+<body class="p-5">
+    <h1 class="text-center" style="font-size: 60px">&#127979;</h1>
+    <h2 class="text-center pb-0 mb-0">Banco Solar C.A</h2>
+    <hr class="w-25 pb-1">
+    <div class="row m-auto px-5">
+        <div class="col-12 col-sm-5">
+            <form id="addUserForm">
+                <div class="form-group text-center">
+                    <h5>Agregar Nuevo Usuario</h5>
+                    <hr class="bg-white w-50">
+                    <div class="d-flex align-items-center justify-content-center">
+                        Nombre: <input class="form-control d-inline mx-3" type="text" id="nombreInput" required>
+                        Balance: <input class="form-control d-inline mx-3" type="number" id="balanceInput" required>
+                        <button type="submit" class="btn btn-danger">Agregar</button>
+                    </div>
+                </div>
+            </form>
+            <br>
+        </div>
+        <div class="col-12 col-sm-7">
+            <form id="transferForm">
+                <div class="form-group text-center">
+                    <h5>Realizar una Transferencia</h5>
+                    <hr class="bg-white w-50">
+                    <div class="d-flex align-items-center justify-content-center flex-wrap">
+                        Emisor: <select id="emisor" class="form-control mx-2 w-auto d-inline"></select>
+                        Receptor: <select id="receptor" class="form-control mx-2 w-auto d-inline"></select>
+                        Monto: <input type="number" class="form-control mx-2 w-auto d-inline" id="monto" required>
+                        <button type="submit" class="btn btn-danger">Realizar</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div class="col-12 row mt-3 mx-0 px-0">
+            <div class="col-12 col-sm-5 text-center">
+                <h5>Tabla de usuarios</h5>
+                <table class="table bg-light">
+                    <thead class="bg-danger text-white">
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Balance</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody class="usuarios"></tbody>
+                </table>
+            </div>
+            <div class="col-12 col-sm-7 text-center">
+                <h5>Tabla de Transferencias</h5>
+                <table class="table bg-light">
+                    <thead class="bg-danger text-white">
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Emisor</th>
+                            <th>Receptor</th>
+                            <th>Monto</th>
+                        </tr>
+                    </thead>
+                    <tbody class="transferencias"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade" id="exampleModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+        <div class="modal-dialog text-dark" role="document">
+            <div class="modal-content">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-2">Nombre</div>
+                        <div class="col-10">
+                            <input id="nombreEdit" type="text" class="form-control">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-2">Balance</div>
+                        <div class="col-10">
+                            <input id="balanceEdit" type="number" class="form-control">
+                        </div>
+                    </div>
+                    <button class="btn btn-danger" id="editButton">Editar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.min.js" crossorigin="anonymous"></script>
+    <script src="https://momentjs.com/downloads/moment.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script>
+      $(document).ready(function() {
+        window.setInfoModal = (nombre, balance, id) => {
+          $("#nombreEdit").val(nombre);
+          $("#balanceEdit").val(balance);
+          $("#editButton").off('click').on('click', () => editUsuario(id));
+        };
+
+        const editUsuario = async (id) => {
+          const nombre = $("#nombreEdit").val();
+          const balance = parseFloat($("#balanceEdit").val());
+          if (isNaN(balance) || balance < 0) {
+            alert("Por favor ingresa un balance válido y positivo.");
+            return;
+          }
+          try {
+            await axios.put(`http://localhost:3000/usuario/${id}`, { nombre, balance });
+            $("#exampleModal").modal("hide");
+            getUsuarios();
+          } catch (e) {
+            console.error(e);
+            alert("Error al actualizar el usuario: " + e.message);
+          }
+        };
+
+        $("#addUserForm").submit(async (e) => {
+          e.preventDefault();
+          let nombre = $("#nombreInput").val();
+          let balance = parseFloat($("#balanceInput").val());
+          if (!nombre.trim() || isNaN(balance) || balance < 0) {
+            alert("Por favor completa el formulario correctamente.");
+            return;
+          }
+          try {
+            await axios.post("http://localhost:3000/usuario", { nombre, balance });
+            $("#nombreInput").val("");
+            $("#balanceInput").val("");
+            getUsuarios();
+          } catch (e) {
+            console.error(e);
+            alert("Error al agregar usuario: " + e.message);
+          }
+        });
+
+        $("#transferForm").submit(async (e) => {
+          e.preventDefault();
+          let emisor = $("#emisor").val();
+          let receptor = $("#receptor").val();
+          let monto = parseFloat($("#monto").val());
+          if (!monto || monto <= 0 || emisor === receptor) {
+            alert("Verifica los campos: Monto debe ser positivo y emisor y receptor deben ser diferentes.");
+            return;
+          }
+          try {
+            await axios.post("http://localhost:3000/transferencia", { emisor: parseInt(emisor), receptor: parseInt(receptor), monto });
+            getTransferencias();
+          } catch (e) {
+            console.error(e);
+            alert("Error al realizar la transferencia: " + e.message);
+          }
+        });
+
+        const getUsuarios = async () => {
+          try {
+            const { data } = await axios.get("http://localhost:3000/usuarios");
+            $(".usuarios").html(data.map(u => `
+                <tr>
+                    <td>${u.nombre}</td>
+                    <td>${u.balance}</td>
+                    <td>
+                        <button class="btn btn-warning mr-2" data-toggle="modal" data-target="#exampleModal" onclick="setInfoModal('${u.nombre}', '${u.balance}', '${u.id}')">Editar</button>
+                        <button class="btn btn-danger" onclick="eliminarUsuario('${u.id}')">Eliminar</button>
+                    </td>
+                </tr>
+            `).join(''));
+            $("#emisor, #receptor").html(data.map(u => `
+                <option value="${u.id}">${u.nombre}</option>
+            `).join(''));
+          } catch (e) {
+            console.error(e);
+            alert("Error al cargar usuarios: " + e.message);
+          }
+        };
+
+        window.eliminarUsuario = async (id) => {
+          if (!confirm("¿Estás seguro de querer eliminar este usuario?")) return;
+          try {
+            await axios.delete(`http://localhost:3000/usuario/${id}`);
+            getUsuarios();
+          } catch (e) {
+            console.error(e);
+            alert("Error al eliminar usuario: " + e.message);
+          }
+        };
+
+        const getTransferencias = async () => {
+          try {
+            const { data } = await axios.get("http://localhost:3000/transferencias");
+            $(".transferencias").html(data.map(t => `
+                <tr>
+                    <td>${formatDate(t.fecha)}</td>
+                    <td>${t.nombre_emisor}</td>
+                    <td>${t.nombre_receptor}</td>
+                    <td>${t.monto}</td>
+                </tr>
+            `).join(''));
+          } catch (e) {
+            console.error(e);
+            alert("Error al cargar transferencias: " + e.message);
+          }
+        };
+
+        const formatDate = (date) => {
+          return moment(date).format("L LTS");
+        };
+
+        getUsuarios();
+        getTransferencias();
+      });
+    </script>
+</body>
+</html>
